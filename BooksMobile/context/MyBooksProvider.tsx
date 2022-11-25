@@ -1,4 +1,5 @@
-import { createContext, useContext, ReactNode, useState } from "react";
+import { createContext, useContext, ReactNode, useState, useEffect } from "react";
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 type MyBooksContextType = {
     onToggleSaved: (book: Book) => void
@@ -18,6 +19,17 @@ type Props = {
 
 const MyBooksProvider: React.FC<Props> = ({ children }) => {
     const [savedBooks, setSavedBooks] = useState<Book[]>([])
+    const [loaded, setLoaded] = useState<boolean>(false)
+
+    useEffect(() => {
+        loadData()
+    }, [])
+
+    useEffect(() => {
+        if (loaded) {
+            persistData()
+        }
+    }, [savedBooks])
 
     const areBooksTheSame = (a: Book, b: Book): boolean => {
         return JSON.stringify(a) === JSON.stringify(b)
@@ -36,6 +48,22 @@ const MyBooksProvider: React.FC<Props> = ({ children }) => {
             // add to savedbooks
             setSavedBooks(books => [...books, book])
         }
+    }
+
+    const persistData = async () => {
+        // write data to local storage
+        await AsyncStorage.setItem('booksData', JSON.stringify(savedBooks))
+    }
+
+    const loadData = async () => {
+        // read data from local storage
+        const dataString = await AsyncStorage.getItem('booksData')
+
+        if (dataString) {
+            const items = JSON.parse(dataString)
+            setSavedBooks(items)
+        }
+        setLoaded(true)
     }
 
     return (
