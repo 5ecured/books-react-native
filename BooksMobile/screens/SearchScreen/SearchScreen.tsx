@@ -1,72 +1,25 @@
 import { ActivityIndicator, StyleSheet, FlatList, TextInput, Button } from 'react-native';
-import { Text, View } from '../components/Themed';
-import { gql, useQuery, useLazyQuery } from '@apollo/client';
-import BookItem from '../components/BookItem';
+import { Text, View } from '../../components/Themed';
+import { useLazyQuery } from '@apollo/client';
+import BookItem from '../../components/BookItem';
 import { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { searchQuery } from './queries';
+import { parseBook } from '../../services/bookService';
 
-const query = gql`
-  query SearchBooks($q: String) {
-    googleBooksSearch(q: $q, country: "US") {
-      items {
-        id
-        volumeInfo {
-          authors
-          averageRating
-          description
-          imageLinks {
-            thumbnail
-          }
-          title
-          subtitle
-          industryIdentifiers {
-            identifier
-            type
-          }
-        }
-      }
-    }
-    openLibrarySearch(q: $q) {
-      docs {
-        author_name
-        title
-        cover_edition_key
-        isbn
-      }
-    }
-  }
-`;
-
-export default function TabOneScreen() {
+export default function SearchScreen() {
   const [search, setSearch] = useState<string>('')
-  const [provider, setProvider] = useState<'googleBooksSearch' | 'openLibrarySearch'>('googleBooksSearch')
+  const [provider, setProvider] = useState<BookProvider>('googleBooksSearch')
 
   // useQuery automatically runs when component mounts, or variables change etc.
   // const { data, loading, error } = useQuery(query, { variables: { q: search } })
 
   // In order to make a graphQL request after a manual trigger e.g. when we press a button, we use useLazyQuery
   // Pay attention to the format, its a bit different from useQuery. "runQuery" is the function we call to trigger it
-  const [runQuery, { data, loading, error }] = useLazyQuery(query)
-
-  const parseBook = (item: any): Book => {
-    if (provider === 'googleBooksSearch') {
-      return {
-        image: item.volumeInfo.imageLinks?.thumbnail,
-        title: item.volumeInfo.title,
-        authors: item.volumeInfo.authors,
-        isbn: item.volumeInfo.industryIdentifiers[0].identifier
-      }
-    }
-
-    return {
-      image: `https://covers.openlibrary.org/b/olid/${item.cover_edition_key}-M.jpg`,
-      title: item.title,
-      authors: item.author_name,
-      isbn: item.isbn?.[0]
-    }
-  }
+  const [runQuery, { data, loading, error }] = useLazyQuery(searchQuery)
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top']} style={styles.container}>
       <View style={styles.header}>
         <TextInput
           value={search}
@@ -106,19 +59,20 @@ export default function TabOneScreen() {
         data={(provider === 'googleBooksSearch' ? data?.googleBooksSearch?.items : data?.openLibrarySearch?.docs) || []}
         renderItem={({ item }) => (
           <BookItem
-            book={parseBook(item)}
+            book={parseBook(item, provider)}
           />
         )}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 10
+    padding: 10,
+    backgroundColor: 'white'
   },
   title: {
     fontSize: 20,
